@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Uinta Basin Air Quality</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0d1117;
+            color: #e6edf3;
+            font-family: 'Segoe UI', sans-serif;
+            padding: 2rem;
+        }
+        header {
+            margin-bottom: 2rem;
+        }
+        header h1 {
+            font-size: 1.8rem;
+            color: #58a6ff;
+        }
+        header p {
+            color: #8b949e;
+            margin-top: 0.25rem;
+        }
+        .cards {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 1.25rem 1.75rem;
+            min-width: 180px;
+        }
+        .card .label {
+            font-size: 0.75rem;
+            color: #8b949e;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .card .value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin: 0.25rem 0;
+        }
+        .card .category {
+            font-size: 0.85rem;
+        }
+        .good { color: #3fb950; }
+        .moderate { color: #d29922; }
+        .unhealthy-sensitive { color: #e3813a; }
+        .unhealthy { color: #f85149; }
+        .very-unhealthy { color: #8957e5; }
+        .hazardous { color: #b91c1c; }
+        .chart-container {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .updated {
+            color: #8b949e;
+            font-size: 0.75rem;
+            text-align: right;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Uinta Basin Air Quality</h1>
+        <p>Vernal, Utah — Real-time AQI monitoring</p>
+    </header>
+
+    <div class="cards" id="current-cards">
+        <div class="card"><div class="label">Loading...</div></div>
+    </div>
+
+    <div class="chart-container">
+        <div id="chart"></div>
+    </div>
+
+    <div class="updated" id="updated"></div>
+
+    <script>
+        function categoryClass(cat) {
+            if (!cat) return '';
+            const c = cat.toLowerCase();
+            if (c === 'good') return 'good';
+            if (c === 'moderate') return 'moderate';
+            if (c.includes('sensitive')) return 'unhealthy-sensitive';
+            if (c === 'unhealthy') return 'unhealthy';
+            if (c.includes('very')) return 'very-unhealthy';
+            if (c === 'hazardous') return 'hazardous';
+            return '';
+        }
+
+        async function loadCurrent() {
+            const res = await fetch('/api/aqi/current');
+            const data = await res.json();
+            const cards = document.getElementById('current-cards');
+            cards.innerHTML = data.map(d => `
+                <div class="card">
+                    <div class="label">${d.parameter}</div>
+                    <div class="value ${categoryClass(d.category)}">${d.aqi}</div>
+                    <div class="category ${categoryClass(d.category)}">${d.category}</div>
+                </div>
+            `).join('');
+            document.getElementById('updated').textContent =
+                `Last updated: ${new Date(data[0]?.recorded_at).toLocaleString()}`;
+        }
+
+        async function loadChart() {
+            const res = await fetch('/api/aqi/history');
+            const data = await res.json();
+
+            const params = [...new Set(data.map(d => d.parameter))];
+            const traces = params.map(p => {
+                const filtered = data.filter(d => d.parameter === p).reverse();
+                return {
+                    x: filtered.map(d => d.recorded_at),
+                    y: filtered.map(d => d.aqi),
+                    name: p,
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    line: { width: 2 }
+                };
+            });
+
+            Plotly.newPlot('chart', traces, {
+                paper_bgcolor: '#161b22',
+                plot_bgcolor: '#161b22',
+                font: { color: '#e6edf3' },
+                xaxis: { gridcolor: '#30363d', title: 'Time' },
+                yaxis: { gridcolor: '#30363d', title: 'AQI' },
+                legend: { bgcolor: '#161b22' },
+                margin: { t: 20 }
+            });
+        }
+
+        loadCurrent();
+        loadChart();
+        setInterval(loadCurrent, 10 * 60 * 1000);
+    </script>
+</body>
+</html>
+
