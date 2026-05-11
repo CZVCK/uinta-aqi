@@ -4,7 +4,8 @@ import psycopg2
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 
-load_dotenv('config/.env')
+from pathlib import Path
+load_dotenv(Path(__file__).parent.parent / 'config' / '.env')
 
 DB_NAME = os.getenv('DB_NAME')
 DB_USER = os.getenv('DB_USER')
@@ -15,7 +16,7 @@ DB_PORT = os.getenv('DB_PORT')
 LAT = 40.4555
 LON = -109.5287
 START_DATE = '2026-05-02'
-END_DATE = '2026-05-06'
+END_DATE = '2026-05-10'
 
 def backfill():
     url = (
