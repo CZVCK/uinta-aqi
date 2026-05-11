@@ -12,3 +12,14 @@ CREATE TABLE IF NOT EXISTS observations (
 
 CREATE INDEX IF NOT EXISTS idx_observations_recorded_at ON observations(recorded_at);
 CREATE INDEX IF NOT EXISTS idx_observations_parameter ON observations(parameter);
+
+CREATE TABLE IF NOT EXISTS weather (
+    id             SERIAL PRIMARY KEY,
+    recorded_at    TIMESTAMP NOT NULL,
+    temperature_f  NUMERIC(5,2) NOT NULL,
+    temperature_c  NUMERIC(5,2) NOT NULL,
+    wind_speed     NUMERIC(5,2) NOT NULL,
+    humidity       INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_weather_recorded_at ON weather(recorded_at);
