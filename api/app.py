@@ -2,8 +2,8 @@ import os
 import psycopg2
 from flask import Flask, jsonify
 from dotenv import load_dotenv
-
-load_dotenv('config/.env')
+from pathlib import Path
+load_dotenv(Path(__file__).parent.parent / 'config' / '.env')
 
 app = Flask(__name__)
 
@@ -60,6 +60,50 @@ def history():
 @app.route('/api/health')
 def health():
     return jsonify({'status': 'ok'})
+
+@app.route('/api/weather/current')
+def weather_current():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT temperature_f, temperature_c, wind_speed, humidity, recorded_at
+        FROM weather
+        ORDER BY recorded_at DESC
+        LIMIT 1
+    """)
+    row = cur.fetchone()
+    cur.close()
+    conn.close()
+    if not row:
+        return jsonify({'error': 'No weather data available'}), 404
+    return jsonify({
+        'temperature_f': float(row[0]),
+        'temperature_c': float(row[1]),
+        'wind_speed':    float(row[2]),
+        'humidity':      row[3],
+        'recorded_at':   row[4].isoformat()
+    })
+
+@app.route('/api/weather/history')
+def weather_history():
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT temperature_f, temperature_c, wind_speed, humidity, recorded_at
+        FROM weather
+        ORDER BY recorded_at DESC
+        LIMIT 200
+    """)
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return jsonify([{
+        'temperature_f': float(r[0]),
+        'temperature_c': float(r[1]),
+        'wind_speed':    float(r[2]),
+        'humidity':      r[3],
+        'recorded_at':   r[4].isoformat()
+    } for r in rows])
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

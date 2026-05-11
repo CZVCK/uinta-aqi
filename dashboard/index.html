@@ -89,65 +89,103 @@
     <div class="updated" id="updated"></div>
 
     <script>
-        function categoryClass(cat) {
-            if (!cat) return '';
-            const c = cat.toLowerCase();
-            if (c === 'good') return 'good';
-            if (c === 'moderate') return 'moderate';
-            if (c.includes('sensitive')) return 'unhealthy-sensitive';
-            if (c === 'unhealthy') return 'unhealthy';
-            if (c.includes('very')) return 'very-unhealthy';
-            if (c === 'hazardous') return 'hazardous';
-            return '';
-        }
+    function categoryClass(cat) {
+        if (!cat) return '';
+        const c = cat.toLowerCase();
+        if (c === 'good') return 'good';
+        if (c === 'moderate') return 'moderate';
+        if (c.includes('sensitive')) return 'unhealthy-sensitive';
+        if (c === 'unhealthy') return 'unhealthy';
+        if (c.includes('very')) return 'very-unhealthy';
+        if (c === 'hazardous') return 'hazardous';
+        return '';
+    }
 
-        async function loadCurrent() {
-            const res = await fetch('/api/aqi/current');
-            const data = await res.json();
-            const cards = document.getElementById('current-cards');
-            cards.innerHTML = data.map(d => `
-                <div class="card">
-                    <div class="label">${d.parameter}</div>
-                    <div class="value ${categoryClass(d.category)}">${d.aqi}</div>
-                    <div class="category ${categoryClass(d.category)}">${d.category}</div>
-                </div>
-            `).join('');
-            document.getElementById('updated').textContent =
-                `Last updated: ${new Date(data[0]?.recorded_at).toLocaleString()}`;
-        }
+    async function loadCurrent() {
+        const [aqiRes, weatherRes] = await Promise.all([
+            fetch('/api/aqi/current'),
+            fetch('/api/weather/current')
+        ]);
+        const aqiData = await aqiRes.json();
+        const weather = await weatherRes.json();
 
-        async function loadChart() {
-            const res = await fetch('/api/aqi/history');
-            const data = await res.json();
+        const cards = document.getElementById('current-cards');
+        const aqiCards = aqiData.map(d => `
+            <div class="card">
+                <div class="label">${d.parameter}</div>
+                <div class="value ${categoryClass(d.category)}">${d.aqi}</div>
+                <div class="category ${categoryClass(d.category)}">${d.category}</div>
+            </div>
+        `).join('');
 
-            const params = [...new Set(data.map(d => d.parameter))];
-            const traces = params.map(p => {
-                const filtered = data.filter(d => d.parameter === p).reverse();
-                return {
-                    x: filtered.map(d => d.recorded_at),
-                    y: filtered.map(d => d.aqi),
-                    name: p,
-                    type: 'scatter',
-                    mode: 'lines+markers',
-                    line: { width: 2 }
-                };
-            });
+        const tempCard = `
+            <div class="card">
+                <div class="label">Temperature</div>
+                <div class="value" style="color:#58a6ff">${weather.temperature_f}°F</div>
+                <div class="category" style="color:#8b949e">Humidity ${weather.humidity}%</div>
+            </div>
+        `;
 
-            Plotly.newPlot('chart', traces, {
-                paper_bgcolor: '#161b22',
-                plot_bgcolor: '#161b22',
-                font: { color: '#e6edf3' },
-                xaxis: { gridcolor: '#30363d', title: 'Time' },
-                yaxis: { gridcolor: '#30363d', title: 'AQI' },
-                legend: { bgcolor: '#161b22' },
-                margin: { t: 20 }
-            });
-        }
+        cards.innerHTML = aqiCards + tempCard;
+        document.getElementById('updated').textContent =
+            `Last updated: ${new Date(aqiData[0]?.recorded_at).toLocaleString()}`;
+    }
 
-        loadCurrent();
-        loadChart();
-        setInterval(loadCurrent, 10 * 60 * 1000);
-    </script>
+    async function loadChart() {
+        const [aqiRes, weatherRes] = await Promise.all([
+            fetch('/api/aqi/history'),
+            fetch('/api/weather/history')
+        ]);
+        const aqiData = await aqiRes.json();
+        const weatherData = await weatherRes.json();
+
+        const params = [...new Set(aqiData.map(d => d.parameter))];
+        const aqiTraces = params.map(p => {
+            const filtered = aqiData.filter(d => d.parameter === p).reverse();
+            return {
+                x: filtered.map(d => d.recorded_at),
+                y: filtered.map(d => d.aqi),
+                name: p,
+                type: 'scatter',
+                mode: 'lines+markers',
+                line: { width: 2 },
+                yaxis: 'y'
+            };
+        });
+
+        const weatherSorted = [...weatherData].reverse();
+        const tempTrace = {
+            x: weatherSorted.map(d => d.recorded_at),
+            y: weatherSorted.map(d => d.temperature_f),
+            name: 'Temperature (°F)',
+            type: 'bar',
+            marker: { color: 'rgba(255, 159, 64, 0.4)' },
+            yaxis: 'y2'
+        };
+
+        Plotly.newPlot('chart', [...aqiTraces, tempTrace], {
+            paper_bgcolor: '#161b22',
+            plot_bgcolor: '#161b22',
+            font: { color: '#e6edf3' },
+            xaxis: { gridcolor: '#30363d', title: 'Time' },
+            yaxis: { gridcolor: '#30363d', title: 'AQI' },
+            yaxis2: {
+                title: 'Temperature (°F)',
+                overlaying: 'y',
+                side: 'right',
+                gridcolor: '#30363d',
+                showgrid: false
+            },
+            legend: { bgcolor: '#161b22' },
+            margin: { t: 20 }
+        });
+    }
+
+    loadCurrent();
+    loadChart();
+    setInterval(loadCurrent, 10 * 60 * 1000);
+</script>
+          
 </body>
 </html>
 
