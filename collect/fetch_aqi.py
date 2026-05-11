@@ -4,7 +4,8 @@ import psycopg2
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 
-load_dotenv('config/.env')
+from pathlib import Path
+load_dotenv(Path(__file__).parent.parent / 'config' / '.env')
 
 API_KEY = os.getenv('AIRNOW_API_KEY')
 DB_NAME = os.getenv('DB_NAME')
@@ -63,3 +64,5 @@ if __name__ == '__main__':
             print(f"{obs.get('ParameterName')}: AQI {obs.get('AQI')} ({obs.get('Category', {}).get('Name')})")
     else:
         print("No observations returned.")
+
+
