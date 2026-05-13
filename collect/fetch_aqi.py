@@ -30,6 +30,17 @@ def fetch_aqi():
     response.raise_for_status()
     return response.json()
 
+PARAM_NORMALIZE = {
+    'ozone': 'O3',
+    'OZONE': 'O3',
+    'Ozone': 'O3',
+    'pm2.5': 'PM2.5',
+    'pm10':  'PM10',
+}
+
+def normalize_param(name):
+    return PARAM_NORMALIZE.get(name, name)
+
 def save_observations(observations):
     conn = psycopg2.connect(
         dbname=DB_NAME, user=DB_USER,
@@ -43,7 +54,7 @@ def save_observations(observations):
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
         """, (
             datetime.now(timezone.utc),
-            obs.get('ParameterName'),
+            normalize_param(obs.get('ParameterName')),
             obs.get('AQI'),
             obs.get('Category', {}).get('Name'),
             obs.get('Latitude'),

@@ -141,7 +141,7 @@
 
         const params = [...new Set(aqiData.map(d => d.parameter))];
         const aqiTraces = params.map(p => {
-            const filtered = aqiData.filter(d => d.parameter === p).reverse();
+            const filtered = aqiData.filter(d => d.parameter === p);
             return {
                 x: filtered.map(d => d.recorded_at),
                 y: filtered.map(d => d.aqi),
@@ -153,10 +153,9 @@
             };
         });
 
-        const weatherSorted = [...weatherData].reverse();
         const tempTrace = {
-            x: weatherSorted.map(d => d.recorded_at),
-            y: weatherSorted.map(d => d.temperature_f),
+            x: weatherData.map(d => d.recorded_at),
+            y: weatherData.map(d => d.temperature_f),
             name: 'Temperature (°F)',
             type: 'bar',
             marker: { color: 'rgba(255, 159, 64, 0.4)' },

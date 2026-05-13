@@ -7,6 +7,17 @@ load_dotenv(Path(__file__).parent.parent / 'config' / '.env')
 
 app = Flask(__name__)
 
+PARAM_NORMALIZE = {
+    'ozone': 'O3',
+    'OZONE': 'O3',
+    'Ozone': 'O3',
+    'pm2.5': 'PM2.5',
+    'pm10':  'PM10',
+}
+
+def normalize_param(name):
+    return PARAM_NORMALIZE.get(name, name)
+
 def get_db():
     return psycopg2.connect(
         dbname=os.getenv('DB_NAME'),
@@ -30,7 +41,7 @@ def current():
     cur.close()
     conn.close()
     return jsonify([{
-        'parameter': r[0],
+        'parameter': normalize_param(r[0]),
         'aqi': r[1],
         'category': r[2],
         'recorded_at': r[3].isoformat(),
@@ -44,14 +55,14 @@ def history():
     cur.execute("""
         SELECT parameter, aqi, category, recorded_at
         FROM observations
-        ORDER BY recorded_at DESC
-        LIMIT 200
+        WHERE recorded_at >= NOW() - INTERVAL '7 days'
+        ORDER BY recorded_at ASC
     """)
     rows = cur.fetchall()
     cur.close()
     conn.close()
     return jsonify([{
-        'parameter': r[0],
+        'parameter': normalize_param(r[0]),
         'aqi': r[1],
         'category': r[2],
         'recorded_at': r[3].isoformat()
@@ -91,8 +102,8 @@ def weather_history():
     cur.execute("""
         SELECT temperature_f, temperature_c, wind_speed, humidity, recorded_at
         FROM weather
-        ORDER BY recorded_at DESC
-        LIMIT 200
+        WHERE recorded_at >= NOW() - INTERVAL '7 days'
+        ORDER BY recorded_at ASC
     """)
     rows = cur.fetchall()
     cur.close()
