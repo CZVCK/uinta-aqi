@@ -31,9 +31,14 @@ def fetch_weather():
 
     current = data["current"]
     temp_f = current["temperature_2m"]
-    temp_c = round((temp_f - 32) * 5 / 9, 2)
     wind_speed = current["wind_speed_10m"]
     humidity = current["relative_humidity_2m"]
+
+    if any(v is None for v in (temp_f, wind_speed, humidity)):
+        print("Skipping: Open-Meteo returned null for one or more fields")
+        return
+
+    temp_c = round((temp_f - 32) * 5 / 9, 2)
     recorded_at = datetime.now(timezone.utc)
 
     conn = psycopg2.connect(

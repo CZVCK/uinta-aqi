@@ -15,8 +15,8 @@ DB_PORT = os.getenv('DB_PORT')
 
 LAT = 40.4555
 LON = -109.5287
-START_DATE = '2026-05-02'
-END_DATE = '2026-05-10'
+START_DATE = '2026-05-01'
+END_DATE = '2026-05-15'
 
 def backfill():
     url = (
@@ -26,7 +26,7 @@ def backfill():
         "&hourly=temperature_2m,wind_speed_10m,relative_humidity_2m"
         "&temperature_unit=fahrenheit"
         "&wind_speed_unit=mph"
-        "&timezone=America/Denver"
+        "&timezone=UTC"
     )
 
     response = requests.get(url)
@@ -45,13 +45,24 @@ def backfill():
     )
     cur = conn.cursor()
 
+    cur.execute(
+        "DELETE FROM weather WHERE recorded_at >= %s AND recorded_at < %s",
+        (START_DATE, END_DATE + ' 23:59:59')
+    )
+
     inserted = 0
+    skipped = 0
     for i, t in enumerate(times):
-        recorded_at = datetime.fromisoformat(t).replace(tzinfo=timezone.utc)
         temp_f = temps_f[i]
-        temp_c = round((temp_f - 32) * 5 / 9, 2)
         wind = winds[i]
         humidity = humidities[i]
+
+        if any(v is None for v in (temp_f, wind, humidity)):
+            skipped += 1
+            continue
+
+        recorded_at = datetime.fromisoformat(t).replace(tzinfo=timezone.utc)
+        temp_c = round((temp_f - 32) * 5 / 9, 2)
 
         cur.execute("""
             INSERT INTO weather (recorded_at, temperature_f, temperature_c, wind_speed, humidity)
@@ -62,7 +73,7 @@ def backfill():
     conn.commit()
     cur.close()
     conn.close()
-    print(f"Backfilled {inserted} hourly records from {START_DATE} to {END_DATE}")
+    print(f"Backfilled {inserted} hourly records from {START_DATE} to {END_DATE} ({skipped} skipped due to null values)")
 
 if __name__ == '__main__':
     backfill()
