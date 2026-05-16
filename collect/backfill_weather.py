@@ -16,11 +16,11 @@ DB_PORT = os.getenv('DB_PORT')
 LAT = 40.4555
 LON = -109.5287
 START_DATE = '2026-05-01'
-END_DATE = '2026-05-15'
+END_DATE = '2026-05-16'
 
 def backfill():
     url = (
-        "https://archive-api.open-meteo.com/v1/archive"
+        "https://api.open-meteo.com/v1/forecast"
         f"?latitude={LAT}&longitude={LON}"
         f"&start_date={START_DATE}&end_date={END_DATE}"
         "&hourly=temperature_2m,wind_speed_10m,relative_humidity_2m"
