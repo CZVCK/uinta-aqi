@@ -37,10 +37,12 @@ python api/app.py
 python collect/fetch_aqi.py
 python collect/fetch_weather.py
 
-# Backfill historical data (edit date range in script first)
+# Backfill historical data (edit START_DATE/END_DATE in script first)
 python collect/backfill_aqi.py
 python collect/backfill_weather.py
 ```
+
+`backfill_weather.py` uses the forecast API (`api.open-meteo.com/v1/forecast`), not the archive API. The archive API lags several days and returns null for recent dates — always use the forecast API for weather backfills.
 
 The API runs on port 5000. The dashboard (`dashboard/index.html`) is a static file served by nginx and calls the API directly.
 
@@ -52,24 +54,7 @@ The API runs on port 5000. The dashboard (`dashboard/index.html`) is a static fi
 - `collect/fetch_weather.py` — 4x daily cron. Calls Open-Meteo (no key needed) for coordinates 40.4555, -109.5287, writes to `weather` table.
 - `api/app.py` — Flask app on port 5000. Five endpoints: `/api/aqi/current`, `/api/aqi/history`, `/api/weather/current`, `/api/weather/history`, `/api/health`.
 - `dashboard/index.html` — Single self-contained HTML file. Plotly.js dual-axis chart (AQI lines + temperature bars), auto-refreshes every 10 minutes.
-- `db/schema.sql` — Only the `observations` table DDL. The `weather` table exists in production but is **missing from this file**.
-
-## Database Schema Gap
-
-`db/schema.sql` is missing the `weather` table definition. The actual table used by the app:
-
-```sql
-CREATE TABLE weather (
-    id SERIAL PRIMARY KEY,
-    recorded_at TIMESTAMP,
-    temperature_f NUMERIC,
-    temperature_c NUMERIC,
-    wind_speed NUMERIC,
-    humidity INTEGER
-);
-```
-
-If recreating the database from schema.sql, add this table manually.
+- `db/schema.sql` — DDL for both `observations` and `weather` tables, with indexes.
 
 ## Cron Schedule (Production)
 
