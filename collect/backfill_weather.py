@@ -61,6 +61,10 @@ def backfill():
             skipped += 1
             continue
 
+        # Match the 4x-daily cron cadence (0, 6, 12, 18 UTC)
+        if datetime.fromisoformat(t).hour not in (0, 6, 12, 18):
+            continue
+
         recorded_at = datetime.fromisoformat(t).replace(tzinfo=timezone.utc)
         temp_c = round((temp_f - 32) * 5 / 9, 2)
 
