@@ -67,13 +67,29 @@ def save_observations(observations):
     conn.close()
     print(f"Saved {len(observations)} observations at {datetime.now(timezone.utc)}")
 
+LOG_FILE = Path(__file__).parent.parent / 'logs' / 'fetch_aqi.log'
+
+def log(msg):
+    timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+    line = f"[{timestamp}] {msg}"
+    print(line)
+    with open(LOG_FILE, 'a') as f:
+        f.write(line + '\n')
+
 if __name__ == '__main__':
-    observations = fetch_aqi()
-    if observations:
-        save_observations(observations)
-        for obs in observations:
-            print(f"{obs.get('ParameterName')}: AQI {obs.get('AQI')} ({obs.get('Category', {}).get('Name')})")
-    else:
-        print("No observations returned.")
+    try:
+        observations = fetch_aqi()
+        if observations:
+            save_observations(observations)
+            for obs in observations:
+                log(f"{obs.get('ParameterName')}: AQI {obs.get('AQI')} ({obs.get('Category', {}).get('Name')})")
+        else:
+            log("No observations returned.")
+    except requests.RequestException as e:
+        log(f"ERROR fetching AQI from AirNow: {e}")
+    except psycopg2.Error as e:
+        log(f"ERROR writing to database: {e}")
+    except Exception as e:
+        log(f"ERROR unexpected: {e}")
 
 

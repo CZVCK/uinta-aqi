@@ -54,8 +54,23 @@ def fetch_weather():
     cur.close()
     conn.close()
 
-    print(f"Weather saved at {recorded_at}")
-    print(f"Temp: {temp_f}°F / {temp_c}°C | Wind: {wind_speed} mph | Humidity: {humidity}%")
+    print(f"Weather saved: {temp_f}°F / {temp_c}°C | Wind: {wind_speed} mph | Humidity: {humidity}%")
+
+LOG_FILE = Path(__file__).parent.parent / 'logs' / 'fetch_weather.log'
+
+def log(msg):
+    timestamp = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S UTC')
+    line = f"[{timestamp}] {msg}"
+    print(line)
+    with open(LOG_FILE, 'a') as f:
+        f.write(line + '\n')
 
 if __name__ == "__main__":
-    fetch_weather()
+    try:
+        fetch_weather()
+    except requests.RequestException as e:
+        log(f"ERROR fetching weather from Open-Meteo: {e}")
+    except psycopg2.Error as e:
+        log(f"ERROR writing to database: {e}")
+    except Exception as e:
+        log(f"ERROR unexpected: {e}")
