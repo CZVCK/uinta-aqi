@@ -55,7 +55,7 @@ def history():
     cur.execute("""
         SELECT parameter, aqi, category, recorded_at
         FROM observations
-        WHERE recorded_at >= NOW() - INTERVAL '7 days'
+        WHERE recorded_at >= NOW() - INTERVAL '1 year'
         ORDER BY recorded_at ASC
     """)
     rows = cur.fetchall()
@@ -100,10 +100,16 @@ def weather_history():
     conn = get_db()
     cur = conn.cursor()
     cur.execute("""
-        SELECT temperature_f, temperature_c, wind_speed, humidity, recorded_at
+        SELECT
+            AVG(temperature_f) AS temperature_f,
+            AVG(temperature_c) AS temperature_c,
+            AVG(wind_speed)    AS wind_speed,
+            ROUND(AVG(humidity)) AS humidity,
+            DATE_TRUNC('day', recorded_at AT TIME ZONE 'America/Denver') AS day
         FROM weather
-        WHERE recorded_at >= NOW() - INTERVAL '7 days'
-        ORDER BY recorded_at ASC
+        WHERE recorded_at >= NOW() - INTERVAL '1 year'
+        GROUP BY day
+        ORDER BY day ASC
     """)
     rows = cur.fetchall()
     cur.close()
